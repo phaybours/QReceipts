@@ -1,0 +1,147 @@
+﻿@page "/receipt"
+@using Microsoft.EntityFrameworkCore
+
+@inject ApplicationContext _dbContext
+@inject ReceiptService _receiptService
+@inject NavigationManager _navigationManager
+@inject IHashids _hashIds
+
+
+<h1>Generated Receipts</h1>
+<hr/>
+
+    <RadzenButton Icon="add_circle_outline" style="margin-bottom: 10px" Text="New" Click="@AddNew" />
+    <RadzenDataGrid @ref="receiptsGrid" AllowFiltering="true" AllowPaging="true" PageSize="5" AllowSorting="true" EditMode="DataGridEditMode.Single"
+                Data="@receipts" TItem="Receipt" >
+        <Columns>
+            @*<RadzenDataGridColumn TItem="int" Title="Item #" Width="120px">
+                <Template>
+                     @String.Format("{0:D}", @count++)
+                </Template>
+            </RadzenDataGridColumn>*@
+            <RadzenDataGridColumn TItem="Receipt" Title="Item #" Property="InvoiceNo" Width="120px">
+                <Template Context="InvoiceNo" >
+                    <RadzenLabel Text="@((receipts.IndexOf(InvoiceNo) + 1).ToString())"  Placeholder="Item #"/>
+                </Template>
+            </RadzenDataGridColumn>
+            @*<RadzenDataGridColumn TItem="Receipt" Property="Id" Title="Item ID" Width="120px" />*@
+            <RadzenDataGridColumn TItem="Receipt" Property="InvoiceNo" Title="Invoice Number" />
+            <RadzenDataGridColumn TItem="Receipt" Property="Date" Title="Order Date" Width="200px">
+                <Template Context="receipt">
+                    @String.Format("{0:d}", receipt.Date)
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="Receipt" Property="BillToName" Title="Customer Name" Width="280px" >
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="Receipt" Property="BillToCity" Title="City">
+                <Template Context="receipt">
+                    @String.Format(new System.Globalization.CultureInfo("en-US"), "{0:C}", receipt.BillToCity)
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="Receipt" Property="ShipToName" Title="Ship To Name"></RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="Receipt" Context="sampleBlazorModelsSampleOrder" Filterable="false" Sortable="false" TextAlign="TextAlign.Center" Width="120px">
+                <Template Context="receipt">
+                    <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Class="m-1" Click="@(args => EditRow(receipt))" @onclick:stopPropagation="true">
+                    </RadzenButton>
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="Receipt" Context="receipt" Filterable="false" Sortable="false" TextAlign="TextAlign.Center" Width="60px">
+                <Template Context="receipt">
+                    <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="delete" Size="ButtonSize.Small" Class="m-1" Click="@(args => DeleteRow(receipt))"  @onclick:stopPropagation="true">
+                    </RadzenButton>
+                </Template>
+            </RadzenDataGridColumn>
+        </Columns>
+    </RadzenDataGrid>
+
+@code {
+    RadzenDataGrid<Receipt> receiptsGrid = new RadzenDataGrid<Receipt>();
+    IList<Receipt> receipts;
+    public int count = 0;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        // For demo purposes only
+        receipts = _dbContext.Receipts.ToList();
+
+    }
+
+    void AddNew()
+    {
+        _navigationManager.NavigateTo($"recipt-details/n");
+    }
+
+    void EditRow(Receipt receipt)
+    {
+        _navigationManager.NavigateTo($"recipt-details/e/{_hashIds.Encode(receipt.Id)}");
+    }
+
+    void OnUpdateRow(Receipt receipt)
+    {
+        if (receipt == receiptToInsert)
+        {
+            receiptToInsert = null;
+        }
+
+        _dbContext.Update(receipt);
+
+        // For production
+        //dbContext.SaveChanges();
+    }
+
+    async Task SaveRow(Receipt receipt)
+    {
+        if (receipt == receiptToInsert)
+        {
+            receiptToInsert = null;
+        }
+
+        await receiptsGrid.UpdateRow(receipt);
+    }
+
+    void CancelEdit(Receipt receipt)
+    {
+        if (receipt == receiptToInsert)
+        {
+            receiptToInsert = null;
+        }
+
+        receiptsGrid.CancelEditRow(receipt);
+
+        // For production
+        var receiptEntry = _dbContext.Entry(receipt);
+        if (receiptEntry.State == EntityState.Modified)
+        {
+            receiptEntry.CurrentValues.SetValues(receiptEntry.OriginalValues);
+            receiptEntry.State = EntityState.Unchanged;
+        }
+    }
+
+    async Task DeleteRow(Receipt receipt)
+    {
+        if (receipt == null)
+            return;
+        var res = await _receiptService.DeleteReceipt(receipt);
+        if(res.code > 0)
+        {
+
+        }
+        else
+        {
+            
+        }
+
+        StateHasChanged();
+    }
+
+    Receipt receiptToInsert;
+
+    async Task InsertRow()
+    {
+        receiptToInsert = new Receipt();
+        await receiptsGrid.InsertRow(receiptToInsert);
+    }
+
+}

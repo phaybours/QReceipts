@@ -1,0 +1,166 @@
+﻿@page "/receipt-preview/{rId}"
+
+@inject ApplicationContext _dbContext
+@inject ReceiptService _receiptService
+@inject IHashids _hashIds
+@inject IJSRuntime _jsRuntime
+
+@if (receipt == null || receiptItems == null || receiptItems.Count < 1)
+{
+
+}
+else
+{
+    <div class="row hideWhenPrint">
+        <div class="col-md-2">
+            @*<input type="button" class="btn btn-danger" onclick="print()" style="margin-buttom:10px;" value="Print">*@
+            @*<a href="javascript:window.print();" class="btn btn-danger">Print Page</a>*@
+            <button class="btn btn-danger" @onclick="Print" >Print</button>
+        </div>
+
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <table class="table " style="padding: 0px; margin: 0;">
+                <tbody>
+                    <tr>
+                        <td>
+                            <h2><b>CROWNBLEZ</b></h2>
+                            12 Ajose Street<br />
+                            Maryland, 100201<br />
+                            08132234508<br />
+                            NG-254893<br />
+                        </td>
+                        <td>
+                            <h1>INVOICE</h1>
+                            <br />
+                            DATE: <b>@String.Format("{0:d}", receipt.Date)</b><br />
+                            INVOICE #: <b>@receipt.InvoiceNo</b><br />
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            <hr style="height: 8px; background: #ffcc66; margin-bottom: 10px;" />
+            <table class="table " style="padding: 0px; margin: 0;">
+                <tr>
+                    <td>
+                        <h3><b>BILL TO:</b></h3>
+                        Name: <b>@receipt.BillToName</b> <br />
+                        Address: <b>@receipt.BillToAddress</b><br />
+                        City, State, Zip: <b>@receipt.BillToCity, @receipt.BillToState, @receipt.BillToZipCode</b><br />
+                        Phone #: <b>@receipt.BillToPhone</b><br />
+                        Email: <b>@receipt.BillToEmail</b><br />
+                        Client #: <b>@receipt.BillToName</b><br />
+                    </td>
+                    <td>
+                        <h3><b>SHIP TO:</b></h3>
+                        Name: <b>@receipt.ShipToName</b><br />
+                        Address: <b>@receipt.ShipToAddress</b><br />
+                        City, State, Zip: <b>@receipt.ShipToCity, @receipt.ShipToState, @receipt.BillToZipCode</b><br />
+                        Contact: <b>@receipt.ShipToContact</b><br />
+                    </td>
+                </tr>
+            </table>
+            <table class="table table-light table-bordered table-striped">
+                <thead class="table-dark">
+                    <tr>
+                        <th style="width:35px;">Item #</th>
+                        <th style="width:250px;">Description</th>
+                        <th style="width:50px;">Quantity</th>
+                        <th style="width:120px; text-align: right;">Unit Price</th>
+                        <th style="width:200px; text-align: right;">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in receiptItems)
+                    {
+                        <tr>
+                            <th scope="row">@String.Format(new System.Globalization.CultureInfo("en-NG"), "{0:D}", count++)</th>
+                            <td>@item.Description</td>
+                            <td>@String.Format(new System.Globalization.CultureInfo("en-NG"), "{0:D}", item.Quantity)</td>
+                            <td style="text-align: right;">@String.Format(new System.Globalization.CultureInfo("en-NG"), "{0:C}", item.UnitPrice)</td>
+                            <td style="text-align: right;">@String.Format(new System.Globalization.CultureInfo("en-NG"), "{0:C}", item.LineTotal)</td>
+                        </tr>
+                    }
+                    <tr>
+                        <th scope="row"></th>
+                        <td></td>
+                        <td></td>
+                        <td style="text-align: right;">Sub Total</td>
+                        <td style="text-align: right;">@String.Format(new System.Globalization.CultureInfo("en-NG"), "{0:C}", subTotal)</td>
+                    </tr>
+                    <tr>
+                        <th scope="row"></th>
+                        <td></td>
+                        <td></td>
+                        <td style="text-align: right;">VAT(@String.Format(new System.Globalization.CultureInfo("en-NG"), "{0}", vat)%)</td>
+                        <td style="text-align: right;">@String.Format(new System.Globalization.CultureInfo("en-NG"), "{0:C}", vatValue)</td>
+                    </tr>
+                    <tr>
+                        <th scope="row"></th>
+                        <td></td>
+                        <td></td>
+                        <td style="font-size:25px; font-weight:bold; text-align: right;">Total</td>
+                        <td style="font-size:25px; font-weight:bold; border-bottom:1px solid #000; text-align: right;">
+                            @String.Format(new System.Globalization.CultureInfo("en-NG"), "{0:C}", grandTotal)
+                            <span style="margin-bottom:4px; display:block; border-bottom:4px solid #000;"></span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="row hideWhenPrint">
+        <div class="col-md-2">
+            @*<btn class="btn-danger" @onclick="Print" style="margin-buttom:10px;">Print</btn>*@
+            @*<a href="javascript:$('.hideWhenPrint').hide();javascript:window.print();" class="btn btn-danger">Print Page</a>*@
+            <input type="button" onclick="Print()" class="btn btn-danger" text="Print" />
+        </div>
+
+    </div>
+}
+
+
+
+
+@code {
+    [Parameter]
+    public string RId { get; set; }
+
+    Receipt receipt = new Receipt();
+    List<ReceiptItem> receiptItems;
+    int count;
+    static decimal subTotal = 0;
+    decimal vat => 7.5m;
+    decimal vatValue => (vat * subTotal) / 100;
+    decimal grandTotal => subTotal + vatValue;
+
+    protected override async Task OnInitializedAsync()
+    {
+        count = 1;
+        RId = RId ?? "";
+        var rawId = _hashIds.Decode(RId);
+        if (rawId.Length > 0)
+        {
+            int Id = rawId[0];
+            receipt = await _receiptService.GetReceiptById(Id);
+            if (receipt is not null && receipt.Id > 0)
+            {
+                receiptItems = await _dbContext.ReceiptItems.Where(x => x.ReceiptId == receipt.Id).ToListAsync();
+                subTotal = receiptItems.Sum(x => x.LineTotal);
+            }
+        }
+    }
+
+    //protected async override Task OnAfterRenderAsync(bool firstRender)
+    //{
+    //    if (firstRender)
+    //    {
+    //        await _jsRuntime.InvokeAsync<object>("jQueryWidgets.initialize");
+    //    }
+    //}
+    async void Print()
+    {
+        await _jsRuntime.InvokeVoidAsync("print()");
+    }
+}

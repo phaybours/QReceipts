@@ -1,0 +1,491 @@
+﻿@page "/recipt-details/{action}"
+@page "/recipt-details/{action}/{rId?}"
+
+
+@using static QReceipts.Data.Receipts.CountryList
+
+
+@inject IHashids _hashIds
+@inject ReceiptService _receiptService
+@inject NavigationManager _navigationManager
+@inject ApplicationContext _dbContext
+
+<style>
+    form .row {
+        margin-bottom: 16px;
+    }
+</style>
+
+@*@if (receipt == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{*@
+    <RadzenTemplateForm Data="@receipt" Submit="@((Receipt args) => { Submit(args); })">
+        <div class="row">
+            <div class="col-md-6">
+                <RadzenFieldset Text="Purchase Info">                   
+                    <div class="row">
+                        <div class="col-md-4 align-items-center d-flex">
+                            <RadzenLabel Text="Date" />
+                        </div>
+                        <div class="col-md-8">
+                            <RadzenDatePicker style="width: 100%;" Name="Date" @bind-Value="receipt.Date"  DateFormat="d" class="w-100">
+                                <FooterTemplate>
+                                    <RadzenButton Click=@OnTodayClick Text="Today" />
+                                </FooterTemplate>
+                            </RadzenDatePicker>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 align-items-center d-flex">
+                            <RadzenLabel Text="Invoice No" />
+                        </div>
+                        <div class="col-md-8">
+                            <RadzenTextBox style="width: 100%;" Name="CardNr" @bind-Value="receipt.InvoiceNo" Disabled="true"/>
+                        </div>
+                    </div>
+                </RadzenFieldset>
+                <RadzenFieldset Text="Contact Info">
+                    <div class="row">
+                        <div class="col-md-4 align-items-center d-flex">
+                            <RadzenLabel Text="Billing Name" />
+                        </div>
+                        <div class="col-md-8">
+                            <RadzenTextBox style="width: 100%;" Name="BillToName" @bind-Value="receipt.BillToName" />
+                        </div>
+                    </div>
+                    <RadzenTabs SelectedIndex="0">
+                        <Tabs>
+                            <RadzenTabsItem Text="Billing Address">
+                                <div class="row">
+                                    <div class="col-md-4 align-items-center d-flex">
+                                        <RadzenLabel Text="Country" />
+                                    </div>
+                                    <div class="col-md-8">
+                                        <RadzenDropDown @bind-Value="receipt.BillToCountry" Placeholder="NIGERIA" Data="@countries" style="width: 100%;" TextProperty="Name" ValueProperty="Id" Name="Country">
+                                        </RadzenDropDown>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-4 align-items-center d-flex">
+                                        <RadzenLabel Text="City" />
+                                    </div>
+                                    <div class="col-md-8">
+                                        <RadzenTextBox style="width: 100%;" Name="City" @bind-Value="receipt.BillToCity" />
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-4 align-items-center d-flex">
+                                        <RadzenLabel Text="Address" />
+                                    </div>
+                                    <div class="col-md-8">
+                                        <RadzenTextBox style="width: 100%;" Name="Address" @bind-Value="receipt.BillToAddress"/>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-4 align-items-center d-flex">
+                                        <RadzenLabel Text="State/Province/Region" />
+                                    </div>
+                                    <div class="col-md-8">
+                                        <RadzenTextBox style="width: 100%;" Name="State" @bind-Value="receipt.BillToState" />
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-4 align-items-center d-flex">
+                                        <RadzenLabel Text="Zip/Postal Code" />
+                                    </div>
+                                    <div class="col-md-8">
+                                        <RadzenTextBox style="width: 100%;" Name="Zip" @bind-Value="receipt.BillToZipCode" />
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-4 align-items-center d-flex">
+                                        <RadzenLabel Text="Phone #" />
+                                    </div>
+                                    <div class="col-md-8">
+                                        @*<RadzenTextBox style="width: 100%;" Name="PhoneNo" @bind-Value="receipt.BillToPhone" />*@
+                                        <RadzenMask Mask="(***) ***-***-****" CharacterPattern="[0-9]" Placeholder="(000) 000-000-0000" Name="PhoneNo" @bind-Value=@receipt.BillToPhone Style="width: 100%;" />
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-4 align-items-center d-flex">
+                                        <RadzenLabel Text="Email" />
+                                    </div>
+                                    <div class="col-md-8">
+                                        <RadzenTextBox style="width: 100%;" Name="Zip" @bind-Value="receipt.BillToEmail" />
+                                    </div>
+                                </div>
+                            </RadzenTabsItem>
+                            <RadzenTabsItem Text="Shipping Address">
+                                <div class="row">
+                                    <RadzenSwitch @bind-Value=@billShipSameAddress Change=@(args => OnChange(args, "Switch")) />
+                                    <span>Same as billing address</span>
+                                </div>                                
+                                    <hr/>
+                                <div class="row">
+                                    <div class="col-md-4 align-items-center d-flex">
+                                        <RadzenLabel Text="Name" />
+                                    </div>
+                                    <div class="col-md-8">
+                                        <RadzenTextBox style="width: 100%;" Name="Zip" @bind-Value="receipt.ShipToName" Disabled="@billShipSameAddress" />
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-4 align-items-center d-flex">
+                                        <RadzenLabel Text="Contact Phone Number" />
+                                    </div>
+                                    <div class="col-md-8">
+                                        <RadzenTextBox style="width: 100%;" Name="Zip" @bind-Value="receipt.ShipToContact" Disabled="@billShipSameAddress" />
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-4 align-items-center d-flex">
+                                        <RadzenLabel Text="Country" />
+                                    </div>
+                                    <div class="col-md-8">
+                                        <RadzenDropDown @bind-Value="receipt.ShipToCountry" Placeholder="NIGERIA" Data="@countries" style="width: 100%;" TextProperty="Name" ValueProperty="Id" Name="Country"  Disabled="@billShipSameAddress">
+                                        </RadzenDropDown>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-4 align-items-center d-flex">
+                                        <RadzenLabel Text="State/Province/Region" />
+                                    </div>
+                                    <div class="col-md-8">
+                                        <RadzenTextBox style="width: 100%;" Name="State" @bind-Value="receipt.ShipToState"  Disabled="@billShipSameAddress" />
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-4 align-items-center d-flex">
+                                        <RadzenLabel Text="City" />
+                                    </div>
+                                    <div class="col-md-8">
+                                        <RadzenTextBox style="width: 100%;" Name="City" @bind-Value="receipt.ShipToCity"  Disabled="@billShipSameAddress"/>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-4 align-items-center d-flex">
+                                        <RadzenLabel Text="Address">
+                                        </RadzenLabel>
+                                    </div>
+                                    <div class="col-md-8">
+                                        <RadzenTextBox style="width: 100%;" Name="Address" @bind-Value="receipt.ShipToAddress"  Disabled="@billShipSameAddress"/>
+                                    </div>
+                                </div>
+                                
+                                
+                            </RadzenTabsItem>
+                        </Tabs>
+                    </RadzenTabs>
+                </RadzenFieldset>
+            </div>
+            @*RECEIPT ITEMS SECTION*@
+            <div class="col-md-6">
+            <RadzenFieldset Text="Receipt Items" >
+                <RadzenButton Icon="add_circle_outline" style="margin-bottom: 10px; width: -20px;" Text="New Item" Click="@InsertRow" Disabled=@(itemToInsert != null) ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small"  />
+                <RadzenButton style="margin-bottom: 10px" Text="Print Receipt" Click="@PrintReceipt" Disabled=@(receiptItems == null) ButtonStyle="ButtonStyle.Info" Size="ButtonSize.Small"/>
+                <RadzenDataGrid @ref="receiptItemsGrid" AllowFiltering="true" AllowPaging="true" PageSize="5" AllowSorting="true" EditMode="DataGridEditMode.Single"
+                                Data="@receiptItems" TItem="ReceiptItem" RowUpdate="@OnUpdateRow" RowCreate="@OnCreateRow">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="ReceiptItem" Property="Id" Title="ID" Width="70px" />
+                        <RadzenDataGridColumn TItem="ReceiptItem" Property="Description" Title="Description" Width="350px">
+                            <EditTemplate Context="receiptItem">
+                                <RadzenTextBox @bind-Value="receiptItem.Description" Style="width:100%; display: block" Name="Description" />
+                            </EditTemplate>
+                        </RadzenDataGridColumn>
+                        
+                        <RadzenDataGridColumn TItem="ReceiptItem" Property="Quantity" Title="Quantity"  Width="130px">
+                            <Template Context="receiptItem">
+                                @String.Format(new System.Globalization.CultureInfo("en-NG"), "{0:D}", receiptItem.Quantity)
+                            </Template>
+                            <EditTemplate Context="receiptItem">
+                                <RadzenNumeric @bind-Value="receiptItem.Quantity" Style="width:100%" TValue="int" Change=@OnQuantityChanged />
+                            </EditTemplate>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="ReceiptItem" Property="UnitPrice" Title="Unit Price"   Width="200px">
+                            <Template Context="receiptItem">
+                                @String.Format(new System.Globalization.CultureInfo("en-NG"), "{0:C}", receiptItem.UnitPrice)
+                            </Template>
+                            <EditTemplate Context="receiptItem">
+                                <RadzenNumeric @bind-Value="receiptItem.UnitPrice" Style="width:100%" TValue="decimal" Change=@OnUnitPriceChanged />
+                            </EditTemplate>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="ReceiptItem" Property="LineTotal" Title="Line Total"  Width="200px">
+                            <Template Context="receiptItem">
+                                @String.Format(new System.Globalization.CultureInfo("en-NG"), "{0:C}", receiptItem.LineTotal)
+                            </Template>
+                            <EditTemplate Context="receiptItem">
+                                <RadzenNumeric @bind-Value="receiptItem.LineTotal" Style="width:100%" />
+                            </EditTemplate>
+                        </RadzenDataGridColumn>
+
+                        <RadzenDataGridColumn TItem="ReceiptItem" Context="sampleBlazorModelsSampleOrder" Filterable="false" Sortable="false" TextAlign="TextAlign.Center" Width="100px">
+                            <Template Context="receiptItem">
+                                <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Class="m-1" Click="@(args => EditRow(receiptItem))" @onclick:stopPropagation="true">
+                                </RadzenButton>
+                            </Template>
+                            <EditTemplate Context="receiptItem">
+                                <RadzenButton Icon="check" ButtonStyle="ButtonStyle.Primary" Class="m-1" Click="@((args) => SaveRow(receiptItem))">
+                                </RadzenButton>
+                                <RadzenButton Icon="close" ButtonStyle="ButtonStyle.Light" Class="m-1" Click="@((args) => CancelEdit(receiptItem))">
+                                </RadzenButton>
+                            </EditTemplate>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="ReceiptItem" Context="order" Filterable="false" Sortable="false" TextAlign="TextAlign.Center" Width="60px">
+                            <Template Context="receiptItem">
+                                <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="delete" Size="ButtonSize.Small" Class="m-1" Click="@(args => DeleteRow(receiptItem))" @onclick:stopPropagation="true">
+                                </RadzenButton>
+                            </Template>
+                            <EditTemplate Context="receiptItem">
+                                <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="delete" Size="ButtonSize.Small" Class="m-1" Click="@(args => DeleteRow(receiptItem))">
+                                </RadzenButton>
+                            </EditTemplate>
+                        </RadzenDataGridColumn>
+                    </Columns>
+                </RadzenDataGrid>
+                <div class="row">
+                    <div class="col-md-4 align-items-right d-flex">
+                        <RadzenLabel Text="Total" />
+                    </div>
+                    <div class="col-md-4 align-items-center d-flex">
+                        <RadzenLabel Text="@String.Format(new System.Globalization.CultureInfo("en-NG"), "{0:C}", grandTotal)"/>
+                    </div>
+                </div>
+
+            </RadzenFieldset>
+               
+            </div>
+        </div>
+        <div class="row justify-content-center">
+            <div class="col-md-12 d-flex align-items-end justify-content-center" style="margin-top: 16px;">
+                <RadzenButton ButtonType="ButtonType.Submit" Icon="save" Text="Save" ButtonStyle="ButtonStyle.Success" />
+                <RadzenButton ButtonStyle="ButtonStyle.Light" Icon="exit_to_app" style="display: inline-block; margin-left: 10px;" Text="Cancel" Click="@Cancel" />
+            </div>
+        </div>
+    </RadzenTemplateForm>
+@*}*@
+
+@code {
+    [Parameter]
+    public string RId { get; set; }
+    [Parameter]
+    public string Action { get; set; }
+
+    public int Id { get; set; }
+
+    public Receipt receipt = new Receipt();
+    public bool billShipSameAddress = true;
+
+    RadzenDataGrid<ReceiptItem> receiptItemsGrid = new RadzenDataGrid<ReceiptItem>();
+    public IList<ReceiptItem> receiptItems;
+    ReceiptItem itemToInsert;
+    decimal grandTotal = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        RId = RId ?? "";
+        var rawId = _hashIds.Decode(RId);
+        if (rawId.Length > 0)
+        {
+            Id = rawId[0];
+            receipt = await _receiptService.GetReceiptById(Id);
+            if(receipt is not null && receipt.Id>0)
+            {
+                receiptItems = await _dbContext.ReceiptItems.Where(x => x.ReceiptId == receipt.Id).ToListAsync();
+
+            }
+        }
+        if (receipt.Date == default)
+            receipt.Date = DateTime.Now;
+
+        if(string.IsNullOrEmpty(receipt.InvoiceNo))
+        {
+            receipt.InvoiceNo = GetInvoice();
+        }
+
+        GetGrandTotal();
+    }
+    void GetGrandTotal()
+    {
+        if(receiptItems!=null && receiptItems.Any())
+            grandTotal = receiptItems.Sum(x => x.LineTotal);
+    }
+
+
+    List<Country> countries = CountryList.GetAll();
+
+    async void Submit(Receipt receipt)
+    {
+        (int? code, string message) res;
+        if (receipt.Id <= 0)
+            res = await _receiptService.CreateReceipt(receipt);
+        else
+            res = await _receiptService.UpdateReceipt(receipt);
+
+        if (res.code == 0)
+        {
+            _navigationManager.NavigateTo($"recipt-details/e/{_hashIds.Encode(receipt.Id)}", forceLoad:true);
+        }
+        else
+        {
+        }
+
+    }
+
+    void Cancel()
+    {
+        _navigationManager.NavigateTo("Receipt");
+    }
+
+    void OnChange(bool? value, string name)
+    {
+        billShipSameAddress = value.Value;
+    }
+
+    string GetInvoice()
+    {
+        var inv = GenerateInvoice();
+        if (_dbContext.Receipts.Any(x => x.InvoiceNo == inv))
+            GetInvoice();
+        return inv;
+    }
+
+    string GenerateInvoice()
+    {
+        string numbers = "1234567890";
+
+        string characters = numbers;
+        int length = 10;
+        string id = string.Empty;
+        for (int i = 0; i < length; i++)
+        {
+            string character = string.Empty;
+            do
+            {
+                int index = new Random().Next(0, characters.Length);
+                character = characters.ToCharArray()[index].ToString();
+            } while (id.IndexOf(character) != -1);
+            id += character;
+        }
+
+        return "FF" + id;
+    }
+
+    void OnTodayClick()
+    {
+        receipt.Date = DateTime.Now;
+    }
+
+    //===========================================================================
+    //===========================================================================
+    //For Receipt Items 
+    //===========================================================================
+    //===========================================================================
+
+    async Task EditRow(ReceiptItem receiptItem)
+    {
+        await receiptItemsGrid.EditRow(receiptItem);
+        itemToInsert = receiptItem;
+    }
+
+    void OnUpdateRow(ReceiptItem receiptItem)
+    {
+        if (receiptItem == itemToInsert)
+        {
+            itemToInsert = null;
+        }
+
+        _dbContext.Update(receiptItem);
+
+        _dbContext.SaveChanges();
+        GetGrandTotal();
+    }
+
+    async Task SaveRow(ReceiptItem receiptItem)
+    {
+        if (receiptItem == itemToInsert)
+        {
+            itemToInsert = null;
+        }
+        receiptItem.ReceiptId = receipt.Id;
+
+        await receiptItemsGrid.UpdateRow(receiptItem);
+        GetGrandTotal();
+    }
+
+    void CancelEdit(ReceiptItem receiptItem)
+    {
+        if (receiptItem == itemToInsert)
+        {
+            itemToInsert = null;
+        }
+
+        receiptItemsGrid.CancelEditRow(receiptItem);
+
+        // For production
+        var orderEntry = _dbContext.Entry(receiptItem);
+        if (orderEntry.State == EntityState.Modified)
+        {
+            orderEntry.CurrentValues.SetValues(orderEntry.OriginalValues);
+            orderEntry.State = EntityState.Unchanged;
+        }
+        GetGrandTotal();
+    }
+
+    async Task DeleteRow(ReceiptItem receiptItem)
+    {
+        if (receiptItem == itemToInsert)
+        {
+            itemToInsert = null;
+        }
+
+        if (receiptItems.Contains(receiptItem))
+        {
+            _dbContext.Remove<ReceiptItem>(receiptItem);
+
+            // For demo purposes only
+            receiptItems.Remove(receiptItem);
+
+            _dbContext.SaveChanges();
+
+            await receiptItemsGrid.Reload();
+        }
+        else
+        {
+            receiptItemsGrid.CancelEditRow(receiptItem);
+        }
+        GetGrandTotal();
+    }
+
+    async Task InsertRow()
+    {
+        itemToInsert = new ReceiptItem();
+        await receiptItemsGrid.InsertRow(itemToInsert);
+    }
+
+    void OnCreateRow(ReceiptItem receiptItem)
+    {
+        _dbContext.Add(receiptItem);
+
+        // For production
+        _dbContext.SaveChanges();
+    }
+
+    void OnQuantityChanged(int value)
+    {
+        itemToInsert.LineTotal = value * itemToInsert.UnitPrice;
+    }
+
+    private void OnUnitPriceChanged(decimal value)
+    {
+        itemToInsert.LineTotal = itemToInsert.Quantity * value;
+    }
+
+    void PrintReceipt()
+    {
+        _navigationManager.NavigateTo($"receipt-preview/{_hashIds.Encode(Id)}");
+    }
+}

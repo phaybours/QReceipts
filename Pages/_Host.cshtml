@@ -1,0 +1,49 @@
+﻿@page "/"
+@namespace QReceipts.Pages
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>QReceipts</title>
+    <base href="~/" />
+    <link rel="stylesheet" href="css/bootstrap/bootstrap.min.css" />
+    <link href="css/site.css" rel="stylesheet" />
+    <link href="QReceipts.styles.css" rel="stylesheet" />
+    @*<link rel="stylesheet" href="_content/Radzen.Blazor/css/default-base.css">*@
+    <link rel="stylesheet" href="_content/Radzen.Blazor/css/default.css">
+    <script type="text/javascript">
+        function print() {
+            $(".hideWhenPrint").hide();
+            window.print();
+        }
+    </script>
+
+</head>
+<body>
+    <component type="typeof(App)" render-mode="ServerPrerendered" />
+
+    <div id="blazor-error-ui">
+        <environment include="Staging,Production">
+            An error has occurred. This application may no longer respond until reloaded.
+        </environment>
+        <environment include="Development">
+            An unhandled exception has occurred. See browser dev tools for details.
+        </environment>
+        <a href="" class="reload">Reload</a>
+        <a class="dismiss">🗙</a>
+    </div>
+
+    <script src="_framework/blazor.server.js"></script>
+    <scipt src="~/jquery/jquery.min.js"></scipt>
+    @*<scipt src="~/js/myJs.js"></scipt>*@
+
+    <script src="_content/Radzen.Blazor/Radzen.Blazor.js"></script>
+    
+</body>
+</html>
